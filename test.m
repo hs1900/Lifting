@@ -1,20 +1,32 @@
-vidObj = VideoWriter('IMG_0410.mov'); 
+clear;clc;
+
+Obj = VideoWriter('60frames.avi');
+writerObj.FrameRate = 30;
+open(Obj);
+
+vidObj = VideoReader('IMG_0410.mov'); 
 nFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
 vidWidth = vidObj.Width;
 
-mov(1:nFrames)= struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'), 'colormap', []);
-for i = 1 : nFrames
-  mov(i).cdata = read(vidObj, k); 
-end
+% mov(1:nFrames)= struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'), 'colormap', []);
+% for i = 1 : nFrames
+%   mov(i).cdata = read(vidObj, i); 
+% end
 
 % Taking the difference between adjacent frames
 % Assuming the foreground is the person of interest
-frame1(1) = mov(1);
-for i = 2 : nFrame
- diff = abs(frame1(i-1) – mov(i));
- if diff >=64
-  th = 1;
-  else th = 0;
- frame1(i) = mov(i);
+
+T = 40;
+diffT = zeros(vidHeight, vidWidth, 300);
+
+
+for i = 2 : 300
+    frame1 = rgb2gray(read(vidObj, i-1));
+    frame2 = rgb2gray(read(vidObj, i));
+    diff = abs(double(frame1) - double(frame2));
+    diffT(:,:,i-1) = (diff>T);
+    writeVideo(Obj,double((diffT(:,:,i-1))));
 end
+ 
+close(Obj);
