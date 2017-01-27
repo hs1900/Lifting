@@ -28,7 +28,7 @@ downDiffT = diffT(1:2:end,1:2:end,:);
 
 open(Obj);
 for i = 2: 100
-    writeVideo(Obj,double((diffT(:,:,i-1))));
+    writeVideo(Obj,double((downDiffT(:,:,i-1))));
 end    
 
 
