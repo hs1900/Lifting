@@ -1,7 +1,7 @@
 clear;clc;
 
 Obj = VideoWriter('60frames.avi');
-writerObj.FrameRate = 60;
+writerObj.FrameRate = 30;
 
 vidObj = VideoReader('IMG_0410.mov'); 
 nFrames = vidObj.NumberOfFrames;
@@ -11,15 +11,17 @@ vidWidth = vidObj.Width;
 % Taking the difference between adjacent frames
 % Assuming the foreground is the person of interest
 % 
-T = 40;
-diffT = zeros(vidHeight, vidWidth, 100);
+T = 20;
+frameBeg = 530;
+selFrame = 100;
+diffT = zeros(vidHeight, vidWidth, selFrame);
 
 
-for i = 2 : 100
-    frame1 = rgb2gray(read(vidObj, i-1));
-    frame2 = rgb2gray(read(vidObj, i));
+for i = frameBeg : selFrame+frameBeg-1
+    frame1 = rgb2gray(read(vidObj, i));
+    frame2 = rgb2gray(read(vidObj, i+3));
     diff = abs(double(frame1) - double(frame2));
-    diffT(:,:,i-1) = (diff>T);
+    diffT(:,:,i+1-frameBeg) = (diff>T);
 %   writeVideo(Obj,double((diffT(:,:,i-1))));
 end
 
@@ -27,9 +29,11 @@ end
 downDiffT = diffT(1:2:end,1:2:end,:);
 
 open(Obj);
-for i = 2: 100
-    writeVideo(Obj,double((downDiffT(:,:,i-1))));
+for i = 1: selFrame
+    writeVideo(Obj,double((downDiffT(:,:,i))));
 end    
 
-
 close(Obj);
+
+% Need a low T for accurate representation
+% Filtering noise created from slight changes
