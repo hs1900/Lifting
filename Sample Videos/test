@@ -1,0 +1,27 @@
+%%
+clear;clc;close all;
+
+Obj = VideoWriter('30framesi+2.avi');
+writerObj.FrameRate = 30;
+
+vidObj = VideoReader('Test2.m4v'); 
+nFrames = vidObj.NumberOfFrames;
+vidHeight = vidObj.Height; 
+vidWidth = vidObj.Width;
+
+% Taking the difference between adjacent frames
+% Assuming the foreground is the person of interest
+T = 20;
+diffT = zeros(vidHeight, vidWidth, nFrames-1);
+
+open(Obj);
+
+for i = 1 : nFrames-2
+    frame1 = rgb2gray(read(vidObj, i));
+    frame2 = rgb2gray(read(vidObj, i+2));
+    diff = abs(double(frame1) - double(frame2));
+    diffT(:,:,i) = (diff>T);
+    writeVideo(Obj,double((diffT(:,:,i))));
+end
+
+close(Obj);
