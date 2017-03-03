@@ -1,8 +1,7 @@
-%%
+%Face Detection to find location of template
 clear;clc;close all;
 
-%change video
-vidObj = VideoReader('goodformshade.m4v'); 
+vidObj = VideoReader('badformshade.m4v'); 
 numFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
 vidWidth = vidObj.Width;
@@ -13,7 +12,11 @@ cutoff = floor(numFrames*(2/3));
 num2Process = numFrames-cutoff;
 
 Obj = VideoWriter('FaceDetection.avi');
-faceDetector = vision.CascadeObjectDetector();
+faceDetector = vision.CascadeObjectDetector('MinSize',[20 20]);
+
+%bbox [x y xdistance ydistance]
+
+minBox = vidHeight/2;
 
 open(Obj);
 for i=1:num2Process    
@@ -23,7 +26,15 @@ for i=1:num2Process
     bbox = step(faceDetector, Frame);
     
     % Draw the returned bounding box around the detected face.
-    videoOut = insertShape(Frame,'rectangle',bbox);
+    videoOut = insertShape(Frame,'rectangle',bbox,'Color','green');
+    
+     if min(bbox(:,2)) < minBox
+        minBox = min(bbox(:,2));
+        templateFrameNum = i;
+        templateLocation = bbox;
+     end
     
     writeVideo(Obj,videoOut);
 end
+
+close(Obj);
