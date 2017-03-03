@@ -1,0 +1,29 @@
+%%
+clear;clc;close all;
+
+%change video
+vidObj = VideoReader('goodformshade.m4v'); 
+numFrames = vidObj.NumberOfFrames;
+vidHeight = vidObj.Height; 
+vidWidth = vidObj.Width;
+
+%Assuming the person will need to face the camera to turn off the recording
+%so only the last x% of the entire segment is processed
+cutoff = floor(numFrames*(2/3));
+num2Process = numFrames-cutoff;
+
+Obj = VideoWriter('FaceDetection.avi');
+faceDetector = vision.CascadeObjectDetector();
+
+open(Obj);
+for i=1:num2Process    
+    Frame = read(vidObj,i+cutoff-1);
+    
+    % Read a video frame and run the detector.
+    bbox = step(faceDetector, Frame);
+    
+    % Draw the returned bounding box around the detected face.
+    videoOut = insertShape(Frame,'rectangle',bbox);
+    
+    writeVideo(Obj,videoOut);
+end
