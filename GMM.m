@@ -5,16 +5,16 @@ Obj = VideoWriter('GMM.avi');
 writerObj.FrameRate = 30;
 open(Obj);
 
-vidObj = VideoReader('Test2.m4v'); 
+vidObj = VideoReader('badformshade.m4v'); 
 nFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
 vidWidth = vidObj.Width;
 %FGvid = zeros(vidHeight,vidWidth,100);
 % Start with first 10 frames
-foregroundDetector = vision.ForegroundDetector('NumGaussians', 3,'NumTrainingFrames', 44);
+foregroundDetector = vision.ForegroundDetector('NumGaussians', 3,'NumTrainingFrames', 20,'LearningRate',.0001);
 % Finish with the first 600 frames
-videoReader = vision.VideoFileReader('Test2.m4v');
-for i = 1:400
+videoReader = vision.VideoFileReader('badformshade.m4v');
+for i = 1:700
     frame = step(videoReader); % read the next video frame
     foreground = step(foregroundDetector, frame);
     
@@ -36,7 +36,7 @@ close(Obj);
 % Reject blobs less than 150 pixels
 blobAnalysis = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
     'AreaOutputPort', false, 'CentroidOutputPort', false, ...
-    'MinimumBlobArea', 150);
+    'MinimumBlobArea', 5000);
 bbox = step(blobAnalysis, filteredForeground);
 % Create box 
 result = insertShape(frame, 'Rectangle', bbox, 'Color', 'green');
