@@ -38,3 +38,18 @@ for i=1:num2Process
 end
 
 close(Obj);
+
+%%
+%Template Matching
+
+x1 = templateLocation(1); y1 = templateLocation(2);
+x2 = templateLocation(3) + x1; y2 = templateLocation(4) + y1;
+templateFrame = rgb2gray(read(vidObj,templateFrameNum+cutoff));
+initialTemplate = templateFrame(y1:y2,x1:x2);
+
+Frame2 = rgb2gray(read(vidObj,templateFrameNum-1+cutoff));
+
+[dx dy matchblock] = templatematching(initialTemplate,Frame2,x1,y1,20);
+dx
+dy
+imshow(uint8(matchblock))
