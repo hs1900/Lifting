@@ -1,6 +1,8 @@
+%% 
 %Face Detection to find location of template
 clear;clc;close all;
 
+%change video
 vidObj = VideoReader('badformshade.m4v'); 
 numFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
@@ -22,7 +24,8 @@ open(Obj);
 for i=1:num2Process    
     Frame = read(vidObj,i+cutoff-1);
     
-    % Read a video frame and run the detector.
+    % Read a video frame and run the detector. 
+    %bbox parameters (xlocation ylocation xdistance ydistance)
     bbox = step(faceDetector, Frame);
     
     % Draw the returned bounding box around the detected face.
@@ -42,14 +45,19 @@ close(Obj);
 %%
 %Template Matching
 
+templateFrameNum = templateFrameNum+cutoff;
+
 x1 = templateLocation(1); y1 = templateLocation(2);
 x2 = templateLocation(3) + x1; y2 = templateLocation(4) + y1;
-templateFrame = rgb2gray(read(vidObj,templateFrameNum+cutoff));
+templateFrame = rgb2gray(read(vidObj,templateFrameNum));
 initialTemplate = templateFrame(y1:y2,x1:x2);
 
-Frame2 = rgb2gray(read(vidObj,templateFrameNum-1+cutoff));
-
-[dx dy matchblock] = templatematching(initialTemplate,Frame2,x1,y1,20);
-dx
-dy
-imshow(uint8(matchblock))
+for m = templateFrameNum-1 : -1 : templateFrameNum-100   %change this number
+    Frame2 = rgb2gray(read(vidObj,m));
+    [dx dy matchblock] = templatematching(initialTemplate,Frame2,x1,y1,20);
+    imshow(matchblock);
+    
+    initialTemplate = matchblock;
+    x1 = dx+x1;
+    y1 = dy+y1;
+end
