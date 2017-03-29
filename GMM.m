@@ -48,11 +48,32 @@ close(Obj);
 cutoff= floor(nFrames*(1/3));
 tempbox = BBox(cutoff:2*cutoff,3);
 tempmax = find(tempbox == max(tempbox));
-endFrameLoc = tempmax+cutoff;
-vidObj2 = VideoReader('GMMbox.avi'); 
+endFrameLoc = tempmax+cutoff-1;
+vidObj2 = VideoReader('GMM.avi'); 
 
-EndFrame = read(Obj2,endFrameLoc);
+EndFrame = (read(vidObj2,endFrameLoc));
 imshow(uint8(EndFrame));
+
+EndFrameBBox = BBox(endFrameLoc,:);
+buttCol = EndFrameBBox(1)+EndFrameBBox(3)-1;
+buttRow = find(EndFrame(:,buttCol) > 50,1);
+
+buttFrame = rgb2gray(read(vidObj,endFrameLoc));
+buttTemp = buttFrame(buttRow-50:buttRow+50,buttCol-20:buttCol);
+
+% tempxy = zeros(nFrames,2); tempxy(endFrameLoc,:) = [buttRow-8,buttCol-8] ;
+% offset tempxy by 8
+ 
+for m = endFrameLoc-1:-1:500
+    prevFrame = rgb2gray(read(vidObj,m));
+    [dx, dy, matchblock] = templatematching(buttTemp,prevFrame,buttCol-20,buttRow-50,10);
+    figure;imshow(uint8(matchblock));
+    buttTemp = matchblock;
+%     tempxy( -m+endFrameLoc,:) = [dx +tempxy(-m+endFrameLoc-1,1), dy+tempxy(-m+endFrameLoc-1,2)];
+    buttCol = buttCol+dy;
+    buttRow = buttRow+dx;
+end
+
 %% Edge
 edgeObj = VideoWriter('edgeGMM.avi');
 GMMObj = VideoReader('GMM.avi'); 
