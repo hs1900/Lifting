@@ -1,0 +1,87 @@
+%% GMM
+clear;clc;close all;
+
+Obj = VideoWriter('GMMgood.avi');
+writerObj.FrameRate = 30;
+open(Obj);
+
+vidObj = VideoReader('goodformshade.m4v'); 
+nFrames = vidObj.NumberOfFrames;
+vidHeight = vidObj.Height; 
+vidWidth = vidObj.Width;
+
+% Train frames with no foreground
+foregroundDetector = vision.ForegroundDetector('NumGaussians', 3,'NumTrainingFrames', 130,'LearningRate',.0001);
+% Complete background subtraction
+
+seOpen = strel('square', 12);
+%  seClose = strel('square', 1);
+BBox = zeros(nFrames,4);
+for i = 1:nFrames
+    frame = read(vidObj,i);
+    foreground = step(foregroundDetector, frame);    
+%   writeVideo(Obj,double(foreground));    
+    IMopen = imopen(foreground,seOpen);
+%   IMclose = imclose(foreground,seClose);   
+
+% blob analysis
+    blobAnalysis = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
+        'AreaOutputPort', false, 'CentroidOutputPort', false, ...
+        'MinimumBlobArea', 4000);
+    bbox = step(blobAnalysis, IMopen);
+
+    index = find(max(bbox(:,3) .*bbox(:,4)));
+    if size(bbox) > [0 3]
+        BBox(i,:) = bbox(index,:);
+    end
+
+    %result = insertShape( 255*uint8(IMopen), 'Rectangle', BBox(i,:), 'Color', 'green');
+    %IMopen = result;
+    writeVideo(Obj,uint8(IMopen)*255);
+end
+
+close(Obj);
+
+%% Matching butt
+cutoff= floor(nFrames*(1/3));
+tempbox = BBox(cutoff:2*cutoff,3);
+tempmax = find(tempbox == max(tempbox));
+endFrameLoc = tempmax(end)+cutoff-1;
+vidObj2 = VideoReader('GMMgood.avi'); 
+
+EndFrame = read(vidObj2,endFrameLoc);
+imshow(uint8(EndFrame));
+
+EndFrameBBox = BBox(endFrameLoc,:);
+buttCol = EndFrameBBox(1)+EndFrameBBox(3)-1;
+buttRow = find(EndFrame(:,buttCol) > 50,1);
+
+buttCoords = zeros(nFrames,2);
+buttCoords(endFrameLoc,1) = buttCol;
+buttCoords(endFrameLoc,2) = buttRow;
+
+% Create template around butt
+buttFrame = rgb2gray(read(vidObj,endFrameLoc));
+
+
+backTempColStart = round(EndFrameBBox(3)*(1/3)); %first hardcoded the size of the box for our image reso
+backTempColEnd = round(EndFrameBBox(3)*(1/15));
+backTempRowStart = round(EndFrameBBox(4)*(4/5));
+
+% buttRow-80, buttRow                         buttCol-50:buttCol+10
+backTemp = buttFrame(buttRow-backTempRowStart:buttRow,buttCol-backTempColStart:buttCol+backTempColEnd);
+
+
+for m = endFrameLoc-1:-1:cutoff
+    prevFrame = rgb2gray(read(vidObj,m));
+    [dx, dy, matchblock] = templatematching(backTemp,prevFrame,buttCol-backTempColStart,buttRow-backTempRowStart ,3);
+
+    imshow(uint8(matchblock));
+    backTemp = matchblock;
+    
+    buttCol = buttCol+dx;
+    buttRow = buttRow+dy;
+    
+    buttCoords(m,1) = buttCol-backTempColStart;
+    buttCoords(m,2) = buttRow-backTempRowStart;
+end
