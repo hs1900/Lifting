@@ -5,7 +5,7 @@ Obj = VideoWriter(GMM);
 writerObj.FrameRate = 30;
 open(Obj);
 
-vidIn = 'badformshade.m4v';
+vidIn = 'Test2.m4v';
 vidObj = VideoReader(vidIn); 
 nFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
@@ -50,7 +50,7 @@ end
 close(Obj);
 
 %% Matching Lower Back
-
+clc;close all;
 % Set Range and Analyze
 cutoff= floor(nFrames*(1/3));
 tempbox = BBox(cutoff:2*cutoff,3);
@@ -60,6 +60,7 @@ tempmax = find(tempbox == max(tempbox));
 endFrameLoc = tempmax+cutoff-1;
 vidObj2 = VideoReader(GMM); 
 
+endFrameLoc = endFrameLoc(1,:);
 EndFrame = (read(vidObj2,endFrameLoc));
 % imshow(uint8(EndFrame));
 
@@ -83,7 +84,7 @@ backTemp = buttFrame(buttRow-backTempRowStart:buttRow, ...
 for m = endFrameLoc-1:-1:cutoff
     prevFrame = rgb2gray(read(vidObj,m));
     [dx, dy, matchblock] = templatematching(backTemp,prevFrame,buttCol-backTempColStart,buttRow-backTempRowStart ,3);
-
+figure;
     imshow(uint8(matchblock));
     backTemp = matchblock;
     
