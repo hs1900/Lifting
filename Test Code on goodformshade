@@ -135,6 +135,6 @@ for m = cutoff:2*cutoff
     binLoc = sel.*c;
     binCol = max(find(binLoc));
     binRow = min(find(binaryMatrix(:,binCol)));
-    buttPOI(m,1) = binCol;%finish
-    buttPOI(m,2) = binRow;
+    buttPOI(m,1) = binCol+buttCoords(m,1);
+    buttPOI(m,2) = binRow+buttCoords(m,2);
 end
