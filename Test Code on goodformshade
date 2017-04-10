@@ -69,8 +69,6 @@ buttCol = EndFrameBBox(1)+EndFrameBBox(3)-1;
 buttRow = find(EndFrame(:,buttCol) > 50,1);
 
 buttCoords = zeros(nFrames,2);
-buttCoords(endFrameLoc,1) = buttCol;
-buttCoords(endFrameLoc,2) = buttRow;
 
 % Create Template Around Butt
 buttFrame = rgb2gray(read(vidObj,endFrameLoc));
@@ -79,7 +77,9 @@ backTempColStart = round(EndFrameBBox(3)*(1/3)); %first hardcoded the size of th
 backTempColEnd = round(EndFrameBBox(3)*(1/10));
 backTempRowStart = round(EndFrameBBox(4)*(3/5));
 
-% buttRow-80, buttRow                         buttCol-50:buttCol+10
+buttCoords(endFrameLoc,1) = buttCol-backTempColStart;
+buttCoords(endFrameLoc,2) = buttRow-backTempRowStart;
+
 % Create New Template for Back
 backTemp = buttFrame(buttRow-backTempRowStart:buttRow, ...
            buttCol-backTempColStart:buttCol+backTempColEnd);
@@ -117,15 +117,24 @@ for m = endFrameLoc+1:2*cutoff
     buttCol = buttCol+dx;
     buttRow = buttRow+dy;
     
-    buttCoords(m,1) = buttCol-backTempColStart;
-    buttCoords(m,2) = buttRow-backTempRowStart;
+   buttCoords(m,1) = buttCol-backTempColStart;
+   buttCoords(m,2) = buttRow-backTempRowStart;
 end
 
 %% Pinpointing back as point of interest
 
 buttObj = VideoReader(GMM);
+buttPOI = zeros(nFrames,2);
+
 for m = cutoff:2*cutoff
-    frame = read(vidObj,m);
-    bFrame = frame(buttCoords(m,2):buttCoords(m,2)+backTempRowStart,buttCoords(m,1):buttCoords(m,1)+backTempColStart+backTempColEnd);
+    frame = read(buttObj,m);
+    bFrame = frame(buttCoords(m,2):backTempRowStart+buttCoords(m,2),buttCoords(m,1):backTempColStart+buttCoords(m,1)+backTempColEnd);
     imshow(bFrame);
+    binaryMatrix = bFrame > 200;
+    [sel c] = max(binaryMatrix ~= 0, [], 1);
+    binLoc = sel.*c;
+    binCol = max(find(binLoc));
+    binRow = min(find(binaryMatrix(:,binCol)));
+    buttPOI(m,1) = binCol;%finish
+    buttPOI(m,2) = binRow;
 end
