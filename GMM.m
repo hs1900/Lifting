@@ -5,14 +5,15 @@ Obj = VideoWriter(GMM);
 writerObj.FrameRate = 30;
 open(Obj);
 
-vidIn = 'Test2.m4v';
+vidIn = 'badformshade.m4v';
 vidObj = VideoReader(vidIn); 
 nFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
 vidWidth = vidObj.Width;
 
 % Train frames 
-foregroundDetector = vision.ForegroundDetector('NumGaussians', 3,'NumTrainingFrames', 130,'LearningRate',.0001);
+foregroundDetector = vision.ForegroundDetector('NumGaussians', 3,...
+    'NumTrainingFrames', 130,'LearningRate',.0001);
 
 % Complete background subtraction and Write Video
 videoReader = vision.VideoFileReader(vidIn);
@@ -34,7 +35,7 @@ for i = 1:nFrames
         'AreaOutputPort', false, 'CentroidOutputPort', false, ...
         'MinimumBlobArea', 4000);
     bbox = step(blobAnalysis, IMopen);
-
+% If there are multiple bounding boxes
     index = find(max(bbox(:,3) .*bbox(:,4)));
     if size(bbox) > [0 3]
         BBox(i,:) = bbox(index,:);
@@ -53,7 +54,8 @@ close(Obj);
 clc;close all;
 % Set Range and Analyze
 cutoff= floor(nFrames*(1/3));
-tempbox = BBox(cutoff:2*cutoff,3);
+tempbox = BBox(cutoff:2*cutoff,3);  
+tempboxH = BBox(cutoff:2*cutoff,4);
 
 % Locate Butt
 tempmax = find(tempbox == max(tempbox));
@@ -68,14 +70,18 @@ EndFrameBBox = BBox(endFrameLoc,:);
 buttCol = EndFrameBBox(1)+EndFrameBBox(3)-1;
 buttRow = find(EndFrame(:,buttCol) > 50,1);
 
+buttCoords = zeros(nFrames,2);
+
 % Create Template Around Butt
 buttFrame = rgb2gray(read(vidObj,endFrameLoc));
 
 backTempColStart = round(EndFrameBBox(3)*(1/3)); %first hardcoded the size of the box for our image
-backTempColEnd = round(EndFrameBBox(3)*(1/15));
-backTempRowStart = round(EndFrameBBox(4)*(4/5));
+backTempColEnd = round(EndFrameBBox(3)*(1/10));
+backTempRowStart = round(EndFrameBBox(4)*(3/5));
 
-% buttRow-80, buttRow                         buttCol-50:buttCol+10
+buttCoords(endFrameLoc,1) = buttCol-backTempColStart;
+buttCoords(endFrameLoc,2) = buttRow-backTempRowStart;
+
 % Create New Template for Back
 backTemp = buttFrame(buttRow-backTempRowStart:buttRow, ...
            buttCol-backTempColStart:buttCol+backTempColEnd);
@@ -84,7 +90,7 @@ backTemp = buttFrame(buttRow-backTempRowStart:buttRow, ...
 for m = endFrameLoc-1:-1:cutoff
     prevFrame = rgb2gray(read(vidObj,m));
     [dx, dy, matchblock] = templatematching(backTemp,prevFrame,buttCol-backTempColStart,buttRow-backTempRowStart ,3);
-figure;
+
     imshow(uint8(matchblock));
     backTemp = matchblock;
     
@@ -97,7 +103,43 @@ end
 
 %% Matching Lower Back Foward
 
+buttCol = EndFrameBBox(1)+EndFrameBBox(3)-1;
+buttRow = find(EndFrame(:,buttCol) > 50,1);
 
+backTemp = buttFrame(buttRow-backTempRowStart:buttRow, ...
+           buttCol-backTempColStart:buttCol+backTempColEnd);
+       
+for m = endFrameLoc+1:2*cutoff
+    nextFrame = rgb2gray(read(vidObj,m));
+    [dx, dy, matchblock] = templatematching(backTemp,nextFrame,buttCol-backTempColStart,buttRow-backTempRowStart ,1);
+
+    imshow(uint8(matchblock));
+    backTemp = matchblock;
+    
+    buttCol = buttCol+dx;
+    buttRow = buttRow+dy;
+    
+   buttCoords(m,1) = buttCol-backTempColStart;
+   buttCoords(m,2) = buttRow-backTempRowStart;
+end
+
+%% Pinpointing back as point of interest
+
+buttObj = VideoReader(GMM);
+buttPOI = zeros(nFrames,2);
+
+for m = cutoff:2*cutoff
+    frame = read(buttObj,m);
+    bFrame = frame(buttCoords(m,2):backTempRowStart+buttCoords(m,2),buttCoords(m,1):backTempColStart+buttCoords(m,1)+backTempColEnd);
+    imshow(bFrame);
+    binaryMatrix = bFrame > 200;
+    [sel c] = max(binaryMatrix ~= 0, [], 1);
+    binLoc = sel.*c;
+    binCol = max(find(binLoc));
+    binRow = min(find(binaryMatrix(:,binCol)));
+    buttPOI(m,1) = binCol+buttCoords(m,1);
+    buttPOI(m,2) = binRow+buttCoords(m,2);
+end
 %% Testing Curvatures
 clc;close all;
 GMMObj = VideoReader(GMM); 
@@ -157,10 +199,46 @@ threshold = 1;
 cur = curvature > threshold;
 Candidates = cur .*curvature;
 figure;plot(Candidates);
+%% Find standing frame
+
 %% HOG 
-peopleDetector = vision.PeopleDetector;
-y = step(peopleDetector,endFrameLoc) ;
-figure;imshow(y);
+% peopleDetector = vision.PeopleDetector;
+% y = step(peopleDetector,endFrameLoc) ;
+% figure;imshow(y);
+I = rgb2gray(read(vidObj,650));
+figure;
+imshow(I);
+[featureVector,hogVisualization] = extractHOGFeatures(I);
+hold on;
+plot(hogVisualization);
+
+% [hog1,visualization] = extractHOGFeatures(I,'CellSize', [180,180]);
+% figure;imshow(I);hold on;
+% plot(visualization);
+
+hogtemp = I(60:92,304:336);
+figure;
+[tempFeature,tempVisualization] = extractHOGFeatures(hogtemp);
+tempFeature = reshape(tempFeature,36,9);
+imshow(hogtemp);
+hold on;
+plot(tempVisualization);
+
+I2 = rgb2gray(read(vidObj,790));
+figure;
+imshow(I2);
+[featureVector2,hogVisualization2] = extractHOGFeatures(I2);
+hold on;
+plot(hogVisualization2);
+
+tempI2 = I2(10:42,50:82);
+figure;
+[tempFeature2,tempVisualization2] = extractHOGFeatures(tempI2);
+tempFeature2 = reshape(tempFeature2,36,9);
+imshow(tempI2);
+hold on;
+plot(tempVisualization2);
+
 %% Edge
 edgeObj = VideoWriter('edgeGMM.avi');
 GMMObj = VideoReader('GMM.avi'); 
