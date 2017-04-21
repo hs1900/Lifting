@@ -146,7 +146,7 @@ GMMObj = VideoReader(GMM);
 fontSize = 20;
 
 % Use Face to Obtain Frame 
-testFrame = rgb2gray(read(GMMObj,780));
+testFrame = rgb2gray(read(GMMObj,660));
 bwFrame = bwboundaries(testFrame);
 
 BW = testFrame > 128;
@@ -154,11 +154,19 @@ BW = testFrame > 128;
 figure;
 imshow(label2rgb(L, @jet, [.5 .5 .5]))
 hold on;
-for k = 1:length(B)
-   boundary = B{k};
-   plot(boundary(1:floor(length(boundary)/30),2), ...
-   boundary(1:floor(length(boundary)/30),1), 'r', 'LineWidth', 2)
+%initialize size
+Bcell = size(B{1},1);
+k=1;
+for i = 2:size(B,1)
+    if size(B{i},1) > Bcell
+        k = i;
+    end
 end
+% for k = 1:length(B)
+   boundary = B{k};
+   plot(boundary(1:floor(length(boundary)),2), ...
+   boundary(1:floor(length(boundary)),1), 'r', 'LineWidth', 2)
+%end
 
 %find radius and curvature
 numberOfPoints = length(boundary);
@@ -189,41 +197,95 @@ for t = 1 : numberOfPoints
 	sqrt(((x2-x1).^2+(y2-y1).^2)*((x3-x1).^2+(y3-y1).^2)*((x3-x2).^2+(y3-y2).^2));
 end
 
+
+threshold = 1;
+cur = curvature > threshold;
+Candidates = cur .*curvature;
+% figure;plot(Candidates);
+
+
+indexCurv = find(Candidates);
+pointCand = boundary(indexCurv,:);
+plot(pointCand(:,2),pointCand(:,1),'x','MarkerSize' ,20);
+% 2 = x, 1 = y
 % Plot curvature.
 figure;plot(curvature, 'b-', 'LineWidth', 1)
 grid on;
 xlim([1 numberOfPoints]); % Set limits for the x axis.
 title('Radius of Curvature', 'FontSize', fontSize);
-
-threshold = 1;
-cur = curvature > threshold;
-Candidates = cur .*curvature;
-figure;plot(Candidates);
 %% Find standing frame
 
+% Set Range and Analyze
+cutoff= floor(nFrames*(1/3));
+tempboxH = BBox(cutoff:2*cutoff,4);
+
+% Locate Butt
+tempmax = find(tempboxH == max(tempboxH),1);
+endFrameLoc = tempmax+cutoff-1;
+vidObj2 = VideoReader(GMM);
+
+endFrameLoc = endFrameLoc(1,:);
+EndFrame = (read(vidObj2,endFrameLoc));
+
 %% HOG 
-% peopleDetector = vision.PeopleDetector;
-% y = step(peopleDetector,endFrameLoc) ;
-% figure;imshow(y);
+vidIn = 'badformshade.m4v';
+vidObj = VideoReader(vidIn); 
+hogFrame = rgb2gray(read(vidObj,endFrameLoc));
+figure;
+imshow(hogFrame);
+% [featureVector,hogVisualization] = extractHOGFeatures(hogFrame);
+% hold on;
+% plot(hogVisualization);
+% nBlock = length(featureVector)/324;
+
+%Template neck
 I = rgb2gray(read(vidObj,650));
-figure;
-imshow(I);
-[featureVector,hogVisualization] = extractHOGFeatures(I);
-hold on;
-plot(hogVisualization);
-
-% [hog1,visualization] = extractHOGFeatures(I,'CellSize', [180,180]);
-% figure;imshow(I);hold on;
-% plot(visualization);
-
-hogtemp = I(60:92,304:336);
-figure;
+hogtemp = I(44-16:44+16,316-16:316+16);
 [tempFeature,tempVisualization] = extractHOGFeatures(hogtemp);
-tempFeature = reshape(tempFeature,36,9);
-imshow(hogtemp);
-hold on;
-plot(tempVisualization);
+% 
+% %Template shoulder
+% I = rgb2gray(read(vidObj,650));
+% hogtemp = I(52:84,304:336);
+% figure;
+% [tempFeature,tempVisualization] = extractHOGFeatures(hogtemp);
 
+% tempFeature = reshape(tempFeature,36,9);
+% imshow(hogtemp);
+% hold on;
+% plot(tempVisualization);
+% ihogCand = 99999999;
+% for i = 20000:324:length(featureVector)-324
+%     
+%     hogCand = (sum(abs(featureVector(i:i+324-1)-tempFeature)));
+%     if hogCand<ihogCand
+%         ihogCand = hogCand;
+%         hogLoc = i;
+%     end
+% end
+ihogCand = 99999;
+for i = 1:size(pointCand,1)
+    if pointCand(i,1)>16 && pointCand(i,2)>16
+    testTemp = hogFrame(pointCand(i,1)-16:pointCand(i,1)+16,...
+        pointCand(i,2)-16:pointCand(i,2)+16);
+    [testFeature,testVisualization] = extractHOGFeatures(testTemp);
+    hogCand = mean(abs(testFeature - tempFeature));
+    
+    if hogCand < ihogCand
+        ihogCand = hogCand;
+        hogLoc = i;
+    end
+    end
+end
+neckPOI = pointCand(hogLoc);
+testTemp = hogFrame(pointCand(hogLoc,1)-16:pointCand(hogLoc,1)+16,...
+        pointCand(hogLoc,2)-16:pointCand(hogLoc,2)+16);
+    imshow(testTemp);
+[testFeature,testVisualization] = extractHOGFeatures(testTemp);hold on
+plot(testVisualization);
+figure;
+imshow(hogtemp);hold on 
+plot(tempVisualization);
+%% Testing to verify hog works
 I2 = rgb2gray(read(vidObj,790));
 figure;
 imshow(I2);
@@ -231,13 +293,14 @@ imshow(I2);
 hold on;
 plot(hogVisualization2);
 
-tempI2 = I2(10:42,50:82);
+tempI2 = I2(100:132,300:332);
 figure;
 [tempFeature2,tempVisualization2] = extractHOGFeatures(tempI2);
-tempFeature2 = reshape(tempFeature2,36,9);
+% tempFeature2 = reshape(tempFeature2,36,9);
 imshow(tempI2);
 hold on;
 plot(tempVisualization2);
+
 
 %% Edge
 edgeObj = VideoWriter('edgeGMM.avi');
