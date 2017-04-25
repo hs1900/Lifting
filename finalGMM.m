@@ -55,7 +55,7 @@ close(Obj);
 
 % Set Range and Analyze
 begcutoff= floor(nFrames*(1/4)); %processing only the first-second third of the video, this number can be changed
-endcutoff = floor(nFrames*(3/4));
+endcutoff = floor(nFrames*(4/5));
 
 bendingBBox = BBox(begcutoff:endcutoff,3); %locating the bbox with largest width
 standingBBox = BBox(begcutoff:endcutoff,4); % locating the bbox with largest height
@@ -101,7 +101,7 @@ for m = bendingFrameLoc-1:-1:begcutoff
     prevFrame = rgb2gray(read(vidObj,m));
     [dx, dy, matchblock] = templatematching(backTemp,prevFrame,buttCol-buttTempColStart,buttRow-buttTempRowStart ,3);
 
-    imshow(uint8(matchblock));
+%     imshow(uint8(matchblock));
     backTemp = matchblock;
     
     buttCol = buttCol+dx;
@@ -123,7 +123,7 @@ for m = bendingFrameLoc+1:endcutoff
     nextFrame = rgb2gray(read(vidObj,m));
     [dx, dy, matchblock] = templatematching(backTemp,nextFrame,buttCol-buttTempColStart,buttRow-buttTempRowStart ,1);
 
-    imshow(uint8(matchblock));
+%     imshow(uint8(matchblock));
     backTemp = matchblock;
     
     buttCol = buttCol+dx;
@@ -142,14 +142,19 @@ buttPOI = zeros(nFrames,2);
 for m = begcutoff:endcutoff
     frame = read(buttObj,m);
     bFrame = frame(buttCoordsTemp(m,2):buttTempRowStart+buttCoordsTemp(m,2),buttCoordsTemp(m,1):buttTempColStart+buttCoordsTemp(m,1)+buttTempColEnd);
-%     imshow(bFrame);
+
+    
     binaryMatrix = bFrame > 200;
-    
-    [sel c] = max(binaryMatrix ~= 0, [], 1);
-    binLoc = sel.*c;
-    binCol = max(find(binLoc));
-    binRow = min(find(binaryMatrix(:,binCol)));
-    
+%     imshow(binaryMatrix);
+    if sum(binaryMatrix)==0
+        binCol = 0;
+        binRow = buttTempRowStart+1;
+    else 
+      [sel c] = max(binaryMatrix ~= 0, [], 1);
+      binLoc = sel.*c;
+      binCol = max(find(binLoc));
+      binRow = min(find(binaryMatrix(:,binCol)));
+    end
     buttPOI(m,1) = binCol+buttCoordsTemp(m,1);
     buttPOI(m,2) = binRow+buttCoordsTemp(m,2);
 end
@@ -241,7 +246,10 @@ grid on;
 xlim([1 numberOfPoints]); % Set limits for the x axis.
 title('Radius of Curvature', 'FontSize', fontSize);
 
+
+neckcutoff = BBox(standingFrameLoc,2)+(BBox(standingFrameLoc,4)/2);
 %% HOG 
+close all;
 % vidIn = 'badformshade.m4v';
 % vidObj = VideoReader(vidIn); 
 hogFrame = rgb2gray(read(vidObj,standingFrameLoc));
@@ -279,16 +287,20 @@ tempFeature = [0.14943308,0.36169705,0.25075939,0.10627335,0.038552579,0.0202930
 % end
 ihogCand = 99999;
 for i = 1:size(pointCand,1)
-    if pointCand(i,1)>16 && pointCand(i,2)>16
-    testTemp = hogFrame(pointCand(i,1)-16:pointCand(i,1)+16,...
-        pointCand(i,2)-16:pointCand(i,2)+16);
-    testFeature = extractHOGFeatures(testTemp);
-    hogCand = mean(abs(testFeature - tempFeature));
-    
-    if hogCand < ihogCand
-        ihogCand = hogCand;
-        hogLoc = i;
-    end
+    if pointCand(i,1) < neckcutoff
+        
+        if pointCand(i,1)>16 && pointCand(i,2)>16
+        testTemp = hogFrame(pointCand(i,1)-16:pointCand(i,1)+16,...
+            pointCand(i,2)-16:pointCand(i,2)+16);
+        testFeature = extractHOGFeatures(testTemp);
+        hogCand = mean(abs(testFeature - tempFeature));
+        end
+        
+        if hogCand < ihogCand
+            ihogCand = hogCand;
+            hogLoc = i;
+        
+        end
     end
 end
 
@@ -300,7 +312,7 @@ imshow(testTemp);
 plot(testVisualization);
 
 %% template match around Neck area
-
+close all;
 neckRow = pointCand(hogLoc,1);
 neckCol = pointCand(hogLoc,2);
 neckTemp = hogFrame(neckRow-20:neckRow+60,neckCol-30:neckCol+20);
@@ -308,15 +320,14 @@ neckTemp = hogFrame(neckRow-20:neckRow+60,neckCol-30:neckCol+20);
 neckCoords = zeros(nFrames,2);
 neckCoords(standingFrameLoc,1) = pointCand(hogLoc,1);
 neckCoords(standingFrameLoc,2) = pointCand(hogLoc,2);
-
-figure;
+% figure;
 %matching backwards
 for m = standingFrameLoc-1:-1:begcutoff
     prevFrame = rgb2gray(read(vidObj,m));
     [dx, dy, matchblock] = templatematching(neckTemp,prevFrame,neckCol-30,neckRow-20,1);
     
     neckTemp = matchblock;
-    imshow(uint8(matchblock));
+%     imshow(uint8(matchblock));
     neckRow = neckRow + dy;
     neckCol = neckCol + dx;
     
@@ -335,7 +346,7 @@ for m = standingFrameLoc+1:endcutoff
     [dx, dy, matchblock] = templatematching(neckTemp,nextFrame,neckCol-30,neckRow-20,1);
 
     neckTemp = matchblock;
-    imshow(uint8(matchblock));
+%     imshow(uint8(matchblock));
     
     neckRow = neckRow + dy;
     neckCol = neckCol + dx;
@@ -354,7 +365,7 @@ for m = begcutoff:endcutoff
     frame = read(buttObj,m);
     bFrame = frame(neckCoords(m,1):80+neckCoords(m,1),neckCoords(m,2):50+neckCoords(m,2));
     binaryMatrix = bFrame > 200;
-    imshow(bFrame)
+%     imshow(bFrame)
     if sum(binaryMatrix(1,:))~=0
         binCol = max(find(binaryMatrix(1,:)));
         binRow = 0;
@@ -367,21 +378,113 @@ for m = begcutoff:endcutoff
     backPOI(m,1) = binRow+neckCoords(m,1);
     backPOI(m,2) = binCol+neckCoords(m,2);
 end
-%% Plotting Points
+%% Boundary for whole video
 
-for i = 1:nFrames
+for i = begcutoff : endcutoff
+    
+boundFrame = rgb2gray(read(GMMObj,i));
+
+BW = boundFrame > 128;
+[Bound(:,:,i),Label(:,:,i)] = bwboundaries(BW,'noholes');
+
+%initialize size
+Bcell = size(Bound{1},1);
+k=1;
+for j = 2:size(B,1)
+    if size(B{j},1) > Bcell
+        k = j;
+    end
+end
+% % for k = 1:length(B)
+%    boundary = B{k};
+%    plot(boundary(1:floor(length(boundary)),2), ...
+%    boundary(1:floor(length(boundary)),1), 'r', 'LineWidth', 2)
+% %end
+end
+%% Plotting Points
+% OUTPUT = VideoWriter('Output.avi');
+close all;
+figure;
+d = zeros(nFrames,3);
+area = zeros(nFrames,1);
+for i = begcutoff:endcutoff
     finalFrame = read(vidObj,i) ;
     imshow(finalFrame); hold on
-    
-    plot(backPOI(i,2),backPOI(i,1),'o','MarkerSize',20);
-    plot(buttPOI(i,1),buttPOI(i,2),'o','MarkerSize',20); 
-end
+    boundFrame = rgb2gray(read(GMMObj,i));
 
-%%
-%Template shoulder
- I = rgb2gray(read(vidObj,standingFrameLoc));
- hogtemp = I(52:84,304:336);
- figure;
- imshow(hogtemp);hold on
- [tempFeature,tempVisualization] = extractHOGFeatures(hogtemp);
- plot(tempVisualization);
+
+    BW = boundFrame > 128;
+    Bound = bwboundaries(BW,'noholes');
+
+    %initialize size
+    Bcell = size(Bound{1},1);
+    k=1;
+    for j = 2:size(Bound,1)
+       if size(Bound{j},1) > Bcell
+            k = j;
+            Bcell = size(Bound{j},1);
+       end
+    end
+%   Markers    
+%     plot(backPOI(i,2),backPOI(i,1),'o','MarkerSize',20);
+%     plot(buttPOI(i,1),buttPOI(i,2),'o','MarkerSize',20); 
+%     boundaryPOI = find(boundaryPoints(:,2) == buttPOI(i,1));
+
+    
+    plot([buttPOI(i,1) backPOI(i,2)],[buttPOI(i,2) backPOI(i,1)], 'r'); 
+    boundaryPoints = Bound{k};
+
+    
+    yCordBack = [find(boundaryPoints(:,1) == backPOI(i,1)-1);
+        find(boundaryPoints(:,1) == backPOI(i,1));
+        find(boundaryPoints(:,1) == backPOI(i,1)+1)];
+    xCordBack = [find(boundaryPoints(:,2) == backPOI(i,2)-1);
+        find(boundaryPoints(:,2) == backPOI(i,2));
+        find(boundaryPoints(:,2) == backPOI(i,2)+1)];
+%     backIndex = intersect(yCordBack,xCordBack);
+%     boundBeg = boundaryPoints(backIndex(1),:);
+    
+    yCordButt = [find(boundaryPoints(:,1) == buttPOI(i,2)-1);
+        find(boundaryPoints(:,1) == buttPOI(i,2));
+        find(boundaryPoints(:,1) == buttPOI(i,2)+1)];
+    xCordButt = [find(boundaryPoints(:,2) == buttPOI(i,1)-1);
+        find(boundaryPoints(:,2) == buttPOI(i,1));
+        find(boundaryPoints(:,2) == buttPOI(i,1)+1)];
+%     buttIndex = intersect(yCordButt,xCordButt);
+%     boundEnd = boundaryPoints(buttIndex(1),:);
+    
+dif=repmat(yCordButt,1,length(xCordButt)) - repmat(xCordButt',length(yCordButt),1);
+[dis,imn]=min(abs(dif(:)));
+[j,n]=ind2sub(size(dif),imn);
+boundEnd = boundaryPoints(yCordButt(j),:);
+
+dif2=repmat(yCordBack,1,length(xCordBack)) - repmat(xCordBack',length(yCordBack),1);
+[dis2,imn2]=min(abs(dif2(:)));
+[j2,n2]=ind2sub(size(dif2),imn2);
+boundBeg = boundaryPoints(yCordBack(j2),:);
+    
+    plot( boundaryPoints(yCordBack(j2):yCordButt(j),2), ...
+        boundaryPoints(yCordBack(j2):yCordButt(j),1), 'w', 'LineWidth', 1)
+
+    X = [boundBeg;boundEnd];
+    d(i,1) = pdist(X,'euclidean');
+    
+    d(i,2) = length(boundaryPoints(yCordBack(j2) : yCordButt(j))); %change back index
+    
+    endLoop = min(floor(d(i,1)),d(i,2));
+    xValues = linspace(backPOI(i,2), buttPOI(i,1),endLoop);
+    heights2 = boundaryPoints(yCordBack(j2):yCordBack(j2)+endLoop);
+    [p1 p2] = polyfit([buttPOI(i,1) backPOI(i,2)],[buttPOI(i,2) backPOI(i,1)],1);
+    heights1 = p1(1)*(xValues-backPOI(i,2))+backPOI(i,1);
+    
+    area(i) = sum(heights1(1:min(length(heights1),length(heights2)))-...
+        heights2(1:min(length(heights1),length(heights2))));
+ % Create a uicontrol of type "text"    
+    mTextBox = uicontrol('style','text');
+    set(mTextBox,'Position', [50 50 50 50]);
+    if area(i) >800                      
+        set(mTextBox,'String','Warning')       
+    else
+        set(mTextBox,'String','Good') 
+    end
+end
