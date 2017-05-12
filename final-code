@@ -10,7 +10,7 @@ writerObj.FrameRate = 30;
 open(Obj);
 
 % Create a video object to process on
-vidIn = 'goodformshade.m4v';
+vidIn = 'badformshade.m4v';
 vidObj = VideoReader(vidIn); 
 nFrames = vidObj.NumberOfFrames;
 vidHeight = vidObj.Height; 
@@ -100,43 +100,6 @@ buttCoordsTemp(bendingFrameLoc,2) = buttRow-buttTempRowStart;
 % Create New Template for Back
 backTemp = buttFrame(buttRow-buttTempRowStart:buttRow, ...
            buttCol-buttTempColStart:buttCol+buttTempColEnd);
-
-%  %Template Match Lower Back
-% for m = bendingFrameLoc-1:-1:begcutoff
-%     prevFrame = rgb2gray(read(vidObj,m));
-%     [dx, dy, matchblock] = templatematching(backTemp,prevFrame,buttCol-buttTempColStart,buttRow-buttTempRowStart ,3);
-% 
-%     imshow(uint8(matchblock));
-%     backTemp = matchblock;
-%     
-%     buttCol = buttCol+dx;
-%     buttRow = buttRow+dy;
-%     
-%     buttCoordsTemp(m,1) = buttCol-buttTempColStart;
-%     buttCoordsTemp(m,2) = buttRow-buttTempRowStart;
-% end
-
-%% Matching Lower Back Foward
-% 
-% buttCol = BendingFrameBBox(1)+BendingFrameBBox(3)-1;
-% buttRow = find(BendingFrame(:,buttCol) > 50,1);
-% 
-% backTemp = buttFrame(buttRow-buttTempRowStart:buttRow, ...
-%            buttCol-buttTempColStart:buttCol+buttTempColEnd);
-%        
-% for m = bendingFrameLoc+1:endcutoff
-%     nextFrame = rgb2gray(read(vidObj,m));
-%     [dx, dy, matchblock] = templatematching(backTemp,nextFrame,buttCol-buttTempColStart,buttRow-buttTempRowStart ,1);
-% 
-% %     imshow(uint8(matchblock));
-%     backTemp = matchblock;
-%     
-%     buttCol = buttCol+dx;
-%     buttRow = buttRow+dy;
-%     
-%    buttCoordsTemp(m,1) = buttCol-buttTempColStart;
-%    buttCoordsTemp(m,2) = buttRow-buttTempRowStart;
-% end
 
 %% Pinpointing lowerback as point of interest
 
