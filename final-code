@@ -329,7 +329,7 @@ end
 close all;
 
 % Create a video object to write to
-Demo = 'Good-formDemo.avi';
+Demo = 'Bad-formDemo.avi';
 FinObj = VideoWriter(Demo);
 videoObj.FrameRate = 30;
 open(FinObj);
